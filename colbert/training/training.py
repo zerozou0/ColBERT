@@ -40,7 +40,10 @@ def train(config: ColBERTConfig, triples, queries=None, collection=None):
         if config.reranker:
             reader = RerankBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks)
         else:
-            reader = LazyBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks)
+            reader = LazyBatcher(
+                config, triples, queries, collection, shuffle=config.resume,
+                rank=(0 if config.rank == -1 else config.rank), nranks=config.nranks
+            )
     else:
         raise NotImplementedError()
 
@@ -52,11 +55,13 @@ def train(config: ColBERTConfig, triples, queries=None, collection=None):
     colbert = colbert.to(DEVICE)
     colbert.train()
 
-    colbert = torch.nn.parallel.DistributedDataParallel(colbert, device_ids=[config.rank],
+    colbert = nn.parallel.DistributedDataParallel(colbert, device_ids=[config.rank],
                                                         output_device=config.rank,
                                                         find_unused_parameters=True)
 
-    optimizer = AdamW(filter(lambda p: p.requires_grad, colbert.parameters()), lr=config.lr, eps=1e-8)
+    optimizer = torch.optim.AdamW(
+        filter(lambda p: p.requires_grad, colbert.parameters()), lr=config.lr, eps=1e-8
+    )
     optimizer.zero_grad()
 
     scheduler = None
@@ -110,10 +115,10 @@ def train(config: ColBERTConfig, triples, queries=None, collection=None):
                 if len(target_scores) and not config.ignore_scores:
                     target_scores = torch.tensor(target_scores).view(-1, config.nway).to(DEVICE)
                     target_scores = target_scores * config.distillation_alpha
-                    target_scores = torch.nn.functional.log_softmax(target_scores, dim=-1)
+                    target_scores = nn.functional.log_softmax(target_scores, dim=-1)
 
-                    log_scores = torch.nn.functional.log_softmax(scores, dim=-1)
-                    loss = torch.nn.KLDivLoss(reduction='batchmean', log_target=True)(log_scores, target_scores)
+                    log_scores = nn.functional.log_softmax(scores, dim=-1)
+                    loss = nn.KLDivLoss(reduction='batchmean', log_target=True)(log_scores, target_scores)
                 else:
                     loss = nn.CrossEntropyLoss()(scores, labels[:scores.size(0)])
 

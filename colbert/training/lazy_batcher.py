@@ -15,7 +15,7 @@ from colbert.data.examples import Examples
 
 
 class LazyBatcher():
-    def __init__(self, config: ColBERTConfig, triples, queries, collection, rank=0, nranks=1):
+    def __init__(self, config: ColBERTConfig, triples, queries, collection, shuffle=False, rank=0, nranks=1):
         self.bsize, self.accumsteps = config.bsize, config.accumsteps
         self.nway = config.nway
 
@@ -26,7 +26,7 @@ class LazyBatcher():
 
         self.triples = Examples.cast(triples, nway=self.nway).tolist(rank, nranks)
         self.queries = Queries.cast(queries)
-        self.collection = Collection.cast(collection)
+        self.collection = Collection.cast(collection, should_shuffle=shuffle)
 
     def __iter__(self):
         return self

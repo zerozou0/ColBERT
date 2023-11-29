@@ -1,4 +1,5 @@
 import os
+import re
 import torch
 
 import __main__
@@ -17,11 +18,15 @@ class RunSettings:
 
     overwrite: bool = DefaultVal(False)
 
-    root: str = DefaultVal(os.path.join(os.getcwd(), 'experiments'))
+    _cwd = os.getcwd()
+    root: str = DefaultVal(
+        _cwd if re.match(r'.*experiments/?$', _cwd) else 
+        os.path.join(_cwd, 'experiments')
+    )
     experiment: str = DefaultVal('default')
 
     index_root: str = DefaultVal(None)
-    name: str = DefaultVal(timestamp(daydir=True))
+    name: str = DefaultVal(timestamp(daydir=False, showsec=False))
 
     rank: int = DefaultVal(0)
     nranks: int = DefaultVal(1)
@@ -76,11 +81,14 @@ class RunSettings:
 
             return script_name
 
-        return 'none'
+        return None
 
     @property
     def path_(self):
-        return os.path.join(self.root, self.experiment, self.script_name_, self.name)
+        # (yid) omit None/empty parts of the path
+        return os.path.join(
+            *[el for el in (self.root, self.experiment, self.script_name_, self.name) if el]
+        )
 
     @property
     def device_(self):

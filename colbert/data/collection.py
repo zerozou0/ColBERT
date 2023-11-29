@@ -6,15 +6,16 @@
 
 import os
 import itertools
+import random
 
 from colbert.evaluation.loaders import load_collection
 from colbert.infra.run import Run
 
 
 class Collection:
-    def __init__(self, path=None, data=None):
+    def __init__(self, path=None, data=None, should_shuffle=False):
         self.path = path
-        self.data = data or self._load_file(path)
+        self.data = data or self._load_file(path, should_shuffle=should_shuffle)
 
     def __iter__(self):
         # TODO: If __data isn't there, stream from disk!
@@ -28,9 +29,13 @@ class Collection:
         # TODO: Load here too. Basically, let's make data a property function and, on first call, either load or get __data.
         return len(self.data)
 
-    def _load_file(self, path):
+    def _load_file(self, path, should_shuffle=False):
         self.path = path
-        return self._load_tsv(path) if path.endswith('.tsv') else self._load_jsonl(path)
+        loaded_data = self._load_tsv(path) if path.endswith('.tsv') else self._load_jsonl(path)
+        if should_shuffle:
+            print('Data shuffled on load.')
+            random.shuffle(loaded_data)
+        return loaded_data
 
     def _load_tsv(self, path):
         return load_collection(path)
@@ -84,12 +89,12 @@ class Collection:
         return min(25_000, 1 + len(self) // Run().nranks)  # 25k is great, 10k allows things to reside on GPU??
 
     @classmethod
-    def cast(cls, obj):
+    def cast(cls, obj, should_shuffle=False):
         if type(obj) is str:
-            return cls(path=obj)
+            return cls(path=obj, should_shuffle=should_shuffle)
 
         if type(obj) is list:
-            return cls(data=obj)
+            return cls(data=obj, should_shuffle=should_shuffle)
 
         if type(obj) is cls:
             return obj

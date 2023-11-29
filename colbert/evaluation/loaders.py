@@ -17,13 +17,18 @@ def load_queries(queries_path):
 
     print_message("#> Loading the queries from", queries_path, "...")
 
-    with open(queries_path) as f:
-        for line in f:
-            qid, query, *_ = line.strip().split('\t')
-            qid = int(qid)
+    line = None
+    try:
+        with open(queries_path) as f:
+            for line in f:
+                qid, query, *_ = line.strip().split('\t')
+                qid = int(qid)
 
-            assert (qid not in queries), ("Query QID", qid, "is repeated!")
-            queries[qid] = query
+                assert (qid not in queries), ("Query QID", qid, "is repeated!")
+                queries[qid] = query
+    except Exception as e:
+        print(f'Error on line {line}')
+        raise e
 
     print_message("#> Got", len(queries), "queries. All QIDs are unique.\n")
 
@@ -165,11 +170,14 @@ def load_collection(collection_path):
             pid, passage, *rest = line.strip('\n\r ').split('\t')
             assert pid == 'id' or int(pid) == line_idx, f"pid={pid}, line_idx={line_idx}"
 
+            if passage.startswith('[D]'):
+                passage = passage[3:].strip()
+
             if len(rest) >= 1:
                 title = rest[0]
-                passage = title + ' | ' + passage
+                passage = title.strip() + ' | ' + passage
 
-            collection.append(passage)
+            collection.append('[D] ' + passage)
 
     print()
 

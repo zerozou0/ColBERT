@@ -20,8 +20,8 @@ def print_message(*s, condition=True, pad=False):
     return msg
 
 
-def timestamp(daydir=False):
-    format_str = f"%Y-%m{'/' if daydir else '-'}%d{'/' if daydir else '_'}%H.%M.%S"
+def timestamp(daydir=False, showsec=True):
+    format_str = f"%Y-%m{'/' if daydir else '-'}%d{'/' if daydir else '_'}%H.%M{'.%S' if showsec else ''}"
     result = datetime.datetime.now().strftime(format_str)
     return result
 

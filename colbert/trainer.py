@@ -1,3 +1,6 @@
+import os
+import re
+
 from colbert.infra.run import Run
 from colbert.infra.launcher import Launcher
 from colbert.infra.config import ColBERTConfig, RunConfig
@@ -24,11 +27,18 @@ class Trainer:
         # Resources don't come from the config object. They come from the input parameters.
         # TODO: After the API stabilizes, make this "self.config.assign()" to emphasize this distinction.
         self.configure(triples=self.triples, queries=self.queries, collection=self.collection)
+
+        if re.match(r'\d{4}-\d\d/\d\d/\d\d(\.\d\d){1,2}', checkpoint):  # complete checkpoint path shorthand
+            checkpoint = os.path.join(
+                self.config.root, self.config.experiment, checkpoint, 'checkpoints', 'colbert'
+            )
         self.configure(checkpoint=checkpoint)
 
         launcher = Launcher(train)
 
         self._best_checkpoint_path = launcher.launch(self.config, self.triples, self.queries, self.collection)
+
+        return self._best_checkpoint_path
 
 
     def best_checkpoint_path(self):
